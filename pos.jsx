@@ -752,13 +752,25 @@ function PromptPayQR({ T, total, size = 220 }) {
 
   useE(() => {
     if (!phone) { setErr('ยังไม่ได้ตั้งเบอร์ PromptPay ใน config.js'); return; }
-    if (!window.QRCode) { setErr('ไลบรารี QR ยังโหลดไม่เสร็จ — ลอง refresh อีกครั้ง'); return; }
-    try {
-      const payload = buildPromptPayPayload(phone, total);
-      window.QRCode.toDataURL(payload, { width: size, margin: 1, errorCorrectionLevel: 'M' })
-        .then(url => setDataUrl(url))
-        .catch(e => setErr(e.message || String(e)));
-    } catch (e) { setErr(e.message || String(e)); }
+    let cancelled = false;
+    function tryGenerate(attempt = 0) {
+      if (cancelled) return;
+      if (typeof window.qrcode !== 'function') {
+        if (attempt < 30) return setTimeout(() => tryGenerate(attempt + 1), 150);
+        setErr('ไลบรารี QR โหลดไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้ว refresh');
+        return;
+      }
+      try {
+        const payload = buildPromptPayPayload(phone, total);
+        const qr = window.qrcode(0, 'M');
+        qr.addData(payload);
+        qr.make();
+        const cellSize = Math.max(2, Math.floor(size / (qr.getModuleCount() + 8)));
+        setDataUrl(qr.createDataURL(cellSize, 4));
+      } catch (e) { setErr(e.message || String(e)); }
+    }
+    tryGenerate();
+    return () => { cancelled = true; };
   }, [phone, total, size]);
 
   if (err) {
@@ -771,7 +783,7 @@ function PromptPayQR({ T, total, size = 220 }) {
   if (!dataUrl) {
     return <div style={{ width: size, height: size, background: '#FBF7EC' }}/>;
   }
-  return <img src={dataUrl} alt="PromptPay QR" width={size} height={size} style={{ display: 'block' }}/>;
+  return <img src={dataUrl} alt="PromptPay QR" width={size} height={size} style={{ display: 'block', imageRendering: 'pixelated' }}/>;
 }
 
 function PaymentDone({ T, onClose }) {
