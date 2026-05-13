@@ -926,6 +926,166 @@ function ExpenseAddSheet({ T, onSave, onClose, catColors }) {
 // Bottom Tab Bar
 // ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
+// Report — full breakdown: items sold, gross, expenses, net
+// ─────────────────────────────────────────────────────────────
+function ReportScreen({ T }) {
+  const [range, setRange] = useState('week'); // today | week | month | all
+  const [state, setState] = useState({ orders: [], expenses: [], loading: true });
+
+  useEffect(() => {
+    let alive = true;
+    setState(s => ({ ...s, loading: true }));
+    const now = new Date();
+    let startISO = null;
+    if (range !== 'all') {
+      const start = new Date(now);
+      start.setHours(0,0,0,0);
+      if (range === 'week')  start.setDate(start.getDate() - 6);
+      if (range === 'month') start.setDate(start.getDate() - 29);
+      startISO = start.toISOString();
+    }
+    Promise.all([
+      window.DB.loadOrdersInRange(startISO, null),
+      window.DB.loadExpensesInRange(startISO, null),
+    ]).then(([orders, expenses]) => {
+      if (alive) setState({ orders, expenses, loading: false });
+    }).catch(e => {
+      if (alive) setState({ orders: [], expenses: [], loading: false });
+      alert('โหลดข้อมูลไม่สำเร็จ: ' + (e.message || e));
+    });
+    return () => { alive = false; };
+  }, [range]);
+
+  const { orders, expenses, loading } = state;
+  const gross   = orders.reduce((s, o) => s + o.total, 0);
+  const expTot  = expenses.reduce((s, e) => s + e.amount, 0);
+  const net     = gross - expTot;
+  const cash    = orders.filter(o => o.pay === 'cash').reduce((s,o)=>s+o.total,0);
+  const transfr = orders.filter(o => o.pay === 'transfer').reduce((s,o)=>s+o.total,0);
+
+  // tally by menu item id
+  const tally = {};
+  orders.forEach(o => (o.lines || []).forEach(l => {
+    if (!tally[l.id]) tally[l.id] = { id: l.id, name: l.name, qty: 0, revenue: 0, color: l.color, image_url: l.image_url };
+    tally[l.id].qty     += l.qty;
+    tally[l.id].revenue += l.line;
+  }));
+  const items = Object.values(tally).sort((a,b) => b.qty - a.qty);
+  const totalUnits = items.reduce((s, i) => s + i.qty, 0);
+
+  // expenses by category
+  const expByCat = {};
+  expenses.forEach(e => { expByCat[e.cat] = (expByCat[e.cat] || 0) + e.amount; });
+  const expCatList = Object.entries(expByCat).sort((a,b) => b[1] - a[1]);
+
+  const rangeLabel = { today: 'วันนี้', week: '7 วัน', month: '30 วัน', all: 'ทั้งหมด' }[range];
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: T.bg, paddingBottom: 100 }}>
+      <ScreenHeader T={T} title="รายงานสรุป" subtitle={`สินค้าที่ขาย · รายได้รวม · กำไรสุทธิ`}/>
+
+      {/* Range tabs */}
+      <div style={{ padding: '0 20px', display: 'flex', gap: 6 }}>
+        {[
+          { id: 'today', label: 'วันนี้' },
+          { id: 'week',  label: '7 วัน' },
+          { id: 'month', label: '30 วัน' },
+          { id: 'all',   label: 'ทั้งหมด' },
+        ].map(r => (
+          <button key={r.id} onClick={() => setRange(r.id)} style={{
+            flex: 1, height: 36, borderRadius: T.r,
+            background: range === r.id ? T.ink : 'transparent',
+            color: range === r.id ? T.bg : T.inkSoft,
+            border: range === r.id ? 'none' : `1px solid ${T.line}`,
+            fontFamily: T.ff, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>{r.label}</button>
+        ))}
+      </div>
+
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 30, color: T.inkSoft, fontSize: 13 }}>กำลังโหลด…</div>
+      )}
+
+      {!loading && (
+        <>
+          {/* Gross */}
+          <div style={{
+            margin: '14px 20px 0', padding: '20px 22px',
+            background: T.accent, borderRadius: T.rLg, color: T.accentInk,
+            boxShadow: T.shadow,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>รายได้รวม ({rangeLabel})</div>
+            <div style={{ fontFamily: T.ffDisplay, fontSize: 38, fontWeight: 700, marginTop: 4 }}>{fmtTHB(gross)}</div>
+            <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
+              {orders.length} บิล · {totalUnits} แก้ว · ก่อนหักรายจ่าย
+            </div>
+          </div>
+
+          {/* Expenses + Net */}
+          <div style={{ margin: '12px 20px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ padding: '12px 14px', background: T.card, borderRadius: T.r, border: `1px solid ${T.line}` }}>
+              <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>รายจ่าย</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: T.danger, fontFamily: 'ui-monospace, monospace', marginTop: 4 }}>{fmtTHB(expTot)}</div>
+              <div style={{ fontSize: 11, color: T.inkMute, marginTop: 2 }}>{expenses.length} รายการ</div>
+            </div>
+            <div style={{ padding: '12px 14px', background: T.card, borderRadius: T.r, border: `1px solid ${T.line}` }}>
+              <div style={{ fontSize: 11, color: T.inkSoft, fontWeight: 600 }}>กำไรสุทธิ</div>
+              <div style={{ fontSize: 22, fontWeight: 700, color: net >= 0 ? T.accent : T.danger, fontFamily: 'ui-monospace, monospace', marginTop: 4 }}>{fmtTHB(net)}</div>
+              <div style={{ fontSize: 11, color: T.inkMute, marginTop: 2 }}>หลังหักรายจ่าย</div>
+            </div>
+          </div>
+
+          {/* Payment split */}
+          <div style={{ margin: '12px 20px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <StatCard T={T} icon="cash" label="เงินสด" value={fmtTHB(cash)}    sub={`${orders.filter(o=>o.pay==='cash').length} บิล`}     tone="warm"/>
+            <StatCard T={T} icon="qr"   label="โอน/QR" value={fmtTHB(transfr)} sub={`${orders.filter(o=>o.pay==='transfer').length} บิล`} tone="accent"/>
+          </div>
+
+          {/* Items sold */}
+          <div style={{ margin: '12px 20px 0', padding: '14px 16px', background: T.card, borderRadius: T.r, border: `1px solid ${T.line}` }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 8 }}>
+              สินค้าที่ขาย {items.length > 0 && `(${items.length} ชนิด)`}
+            </div>
+            {items.length === 0 ? (
+              <div style={{ fontSize: 13, color: T.inkMute, padding: 8, textAlign: 'center' }}>ยังไม่มีบิลในช่วงนี้</div>
+            ) : items.map((it, i) => (
+              <div key={it.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+                borderTop: i === 0 ? 'none' : `1px solid ${T.line}`,
+              }}>
+                <div style={{ width: 22, fontSize: 12, fontWeight: 700, color: T.inkMute, fontFamily: 'ui-monospace, monospace' }}>{i+1}</div>
+                <FruitDot color={it.color} image={it.image_url} size={32}/>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{it.name}</div>
+                  <div style={{ fontSize: 11, color: T.inkMute }}>{fmtTHB(it.revenue)}</div>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: 'ui-monospace, monospace' }}>{it.qty} แก้ว</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Expenses by category */}
+          {expCatList.length > 0 && (
+            <div style={{ margin: '12px 20px 0', padding: '14px 16px', background: T.card, borderRadius: T.r, border: `1px solid ${T.line}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 8 }}>รายจ่ายแยกตามหมวด</div>
+              {expCatList.map(([cat, amount], i) => (
+                <div key={cat} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 0', borderTop: i === 0 ? 'none' : `1px solid ${T.line}`,
+                }}>
+                  <div style={{ fontSize: 14, color: T.ink }}>{cat}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.danger, fontFamily: 'ui-monospace, monospace' }}>{fmtTHB(amount)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // User Management (owner only)
 // ─────────────────────────────────────────────────────────────
 function UsersScreen({ T, users, currentUser, onAddUser, onUpdateUser, onDeleteUser }) {
@@ -1100,6 +1260,7 @@ function TabBar({ T, current, onChange, user }) {
   const tabs = [
     { id: 'pos',       label: 'ขาย',     icon: 'cart' },
     { id: 'dashboard', label: 'สรุปยอด', icon: 'chart' },
+    ...(isOwner ? [{ id: 'report', label: 'รายงาน', icon: 'receipt' }] : []),
     { id: 'menu',      label: 'เมนู',     icon: 'menu' },
     { id: 'expense',   label: 'รายจ่าย', icon: 'wallet' },
     ...(isOwner ? [{ id: 'users', label: 'ผู้ใช้', icon: 'user' }] : []),
@@ -1132,5 +1293,5 @@ function TabBar({ T, current, onChange, user }) {
 
 Object.assign(window, {
   FruitDot, Icon, Pill, Btn, ScreenHeader, Field, inputStyle, shade,
-  LoginScreen, DashboardScreen, MenuMgmtScreen, ExpensesScreen, UsersScreen, TabBar,
+  LoginScreen, DashboardScreen, ReportScreen, MenuMgmtScreen, ExpensesScreen, UsersScreen, TabBar,
 });

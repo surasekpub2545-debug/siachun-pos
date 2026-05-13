@@ -179,6 +179,8 @@ function App({ theme }) {
   } else if (screen === 'users') {
     main = <UsersScreen T={T} users={users} currentUser={user}
               onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser}/>;
+  } else if (screen === 'report') {
+    main = <ReportScreen T={T}/>;
   }
 
   return (

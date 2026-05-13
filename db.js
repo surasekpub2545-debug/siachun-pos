@@ -118,6 +118,24 @@
     if (error) throw error;
   }
 
+  async function loadOrdersInRange(startISO, endISO) {
+    let q = sb.from('orders').select('*').order('created_at', { ascending: false });
+    if (startISO) q = q.gte('created_at', startISO);
+    if (endISO)   q = q.lt('created_at', endISO);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data.map(rowToOrder);
+  }
+
+  async function loadExpensesInRange(startISO, endISO) {
+    let q = sb.from('expenses').select('*').order('created_at', { ascending: false });
+    if (startISO) q = q.gte('created_at', startISO);
+    if (endISO)   q = q.lt('created_at', endISO);
+    const { data, error } = await q;
+    if (error) throw error;
+    return data.map(rowToExpense);
+  }
+
   async function loadOrdersByDate(dateStr) {
     const start = new Date(dateStr + 'T00:00:00');
     const end   = new Date(start.getTime() + 86400000);
@@ -234,7 +252,7 @@
     addMenu, updateMenu, deleteMenu, toggleMenuStock, uploadMenuImage,
     addUser, updateUser, deleteUser,
     addExpense, deleteExpense,
-    addOrder, deleteOrder, loadOrdersByDate,
+    addOrder, deleteOrder, loadOrdersByDate, loadOrdersInRange, loadExpensesInRange,
     subscribe,
   };
 })();
