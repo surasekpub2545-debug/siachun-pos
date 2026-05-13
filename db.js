@@ -56,17 +56,17 @@
     return data.map(rowToOrder);
   }
 
-  async function loadSales14d() {
-    const since = startOfDaysAgoISO(13);
+  async function loadSales30d() {
+    const since = startOfDaysAgoISO(29);
     const { data, error } = await sb.from('orders')
       .select('created_at,total').gte('created_at', since);
     if (error) throw error;
-    return aggregateSales(data, 14);
+    return aggregateSales(data, 30);
   }
 
   async function loadAll() {
     const [menu, expenses, orders, sales, users] = await Promise.all([
-      loadMenu(), loadExpenses(), loadTodayOrders(), loadSales14d(), loadUsers(),
+      loadMenu(), loadExpenses(), loadTodayOrders(), loadSales30d(), loadUsers(),
     ]);
     return { menu, expenses, orders, sales, users };
   }
@@ -132,7 +132,7 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses'   }, async () => onExpense && onExpense(await loadExpenses()))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders'     }, async () => {
          if (!onOrder) return;
-         const [orders, sales] = await Promise.all([loadTodayOrders(), loadSales14d()]);
+         const [orders, sales] = await Promise.all([loadTodayOrders(), loadSales30d()]);
          onOrder(orders, sales);
       })
       .subscribe();
@@ -196,7 +196,7 @@
   }
 
   window.DB = {
-    loadAll, loadMenu, loadExpenses, loadTodayOrders, loadSales14d, loadUsers,
+    loadAll, loadMenu, loadExpenses, loadTodayOrders, loadSales30d, loadUsers,
     addMenu, updateMenu, deleteMenu, toggleMenuStock, uploadMenuImage,
     addExpense, deleteExpense,
     addOrder,

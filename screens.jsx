@@ -272,6 +272,18 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
   const cashTotal     = orders.filter(o => o.pay === 'cash').reduce((s,o)=>s+o.total,0);
   const transferTotal = orders.filter(o => o.pay === 'transfer').reduce((s,o)=>s+o.total,0);
 
+  // range totals from per-day sales buckets (DB-backed, no fake multipliers)
+  const sumBuckets = (arr) => arr.reduce(
+    (a, b) => ({ orders: a.orders + b.orders, revenue: a.revenue + b.revenue }),
+    { orders: 0, revenue: 0 }
+  );
+  const week  = sumBuckets(sales.slice(-7));
+  const month = sumBuckets(sales);
+  const cur = range === 'day'
+    ? { orders: todayOrders, revenue: todayRevenue }
+    : range === 'week' ? week : month;
+  const rangeLabel = range === 'day' ? 'ยอดขายวันนี้' : range === 'week' ? 'ยอดขาย 7 วัน' : 'ยอดขาย 30 วัน';
+
   // top items today: tally from orders that have an items[] array; fallback to mock
   const topItems = useMemo(() => {
     const tally = {};
@@ -326,15 +338,15 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
         boxShadow: T.shadow, position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.75, letterSpacing: 0.3 }}>
-          ยอดขายวันนี้
+          {rangeLabel}
         </div>
         <div style={{
           fontFamily: T.ffDisplay, fontSize: 42, fontWeight: 700,
           letterSpacing: -1, marginTop: 4,
-        }}>{fmtTHB(range === 'day' ? todayRevenue : range === 'week' ? todayRevenue * 6.2 | 0 : todayRevenue * 26.4 | 0)}</div>
+        }}>{fmtTHB(cur.revenue)}</div>
         <div style={{ display: 'flex', gap: 18, marginTop: 12, fontSize: 12, opacity: 0.9 }}>
-          <span><b style={{ fontSize: 15 }}>{todayOrders}</b> ออเดอร์</span>
-          <span>เฉลี่ย <b style={{ fontSize: 15 }}>{fmtTHB(todayOrders ? Math.round(todayRevenue/todayOrders) : 100)}</b>/ออเดอร์</span>
+          <span><b style={{ fontSize: 15 }}>{cur.orders}</b> ออเดอร์</span>
+          <span>เฉลี่ย <b style={{ fontSize: 15 }}>{fmtTHB(cur.orders ? Math.round(cur.revenue/cur.orders) : 0)}</b>/ออเดอร์</span>
         </div>
         {/* decorative leaf */}
         <div style={{ position: 'absolute', right: -10, top: -10, opacity: 0.15 }}>
@@ -352,7 +364,7 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>กราฟ 14 วันย้อนหลัง</div>
           <div style={{ fontSize: 11, color: T.inkMute }}>หน่วย: บาท</div>
         </div>
-        <BarChart T={T} data={sales}/>
+        <BarChart T={T} data={sales.slice(-14)}/>
       </div>
 
       {/* Payment split */}
