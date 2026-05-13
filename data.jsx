@@ -30,6 +30,9 @@ const MENU_SEED = [
 
 const CATEGORIES = [
   { id: 'all',    name: 'ทั้งหมด' },
+  { id: 'small',  name: 'เล็ก' },
+  { id: 'medium', name: 'กลาง' },
+  { id: 'large',  name: 'ใหญ่' },
   { id: 'drink',  name: 'น้ำ' },
   { id: 'syrup',  name: 'ไซรัป' },
   { id: 'kratom', name: 'ใบกระท่อม' },
