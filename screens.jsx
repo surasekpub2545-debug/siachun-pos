@@ -973,10 +973,8 @@ function ReportScreen({ T }) {
   const items = Object.values(tally).sort((a,b) => b.qty - a.qty);
   const totalUnits = items.reduce((s, i) => s + i.qty, 0);
 
-  // expenses by category
-  const expByCat = {};
-  expenses.forEach(e => { expByCat[e.cat] = (expByCat[e.cat] || 0) + e.amount; });
-  const expCatList = Object.entries(expByCat).sort((a,b) => b[1] - a[1]);
+  // expenses list (sorted by amount desc)
+  const expList = [...expenses].sort((a,b) => b.amount - a.amount);
 
   const rangeLabel = { today: 'วันนี้', week: '7 วัน', month: '30 วัน', all: 'ทั้งหมด' }[range];
 
@@ -1064,17 +1062,20 @@ function ReportScreen({ T }) {
             ))}
           </div>
 
-          {/* Expenses by category */}
-          {expCatList.length > 0 && (
+          {/* Expenses list */}
+          {expList.length > 0 && (
             <div style={{ margin: '12px 20px 0', padding: '14px 16px', background: T.card, borderRadius: T.r, border: `1px solid ${T.line}` }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 8 }}>รายจ่ายแยกตามหมวด</div>
-              {expCatList.map(([cat, amount], i) => (
-                <div key={cat} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 8 }}>รายการรายจ่าย ({expList.length})</div>
+              {expList.map((e, i) => (
+                <div key={e.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
                   padding: '8px 0', borderTop: i === 0 ? 'none' : `1px solid ${T.line}`,
                 }}>
-                  <div style={{ fontSize: 14, color: T.ink }}>{cat}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: T.danger, fontFamily: 'ui-monospace, monospace' }}>{fmtTHB(amount)}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, color: T.ink, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</div>
+                    <div style={{ fontSize: 11, color: T.inkMute, marginTop: 2 }}>{e.date} · {e.cat}</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: T.danger, fontFamily: 'ui-monospace, monospace', flexShrink: 0 }}>{fmtTHB(e.amount)}</div>
                 </div>
               ))}
             </div>
