@@ -683,11 +683,11 @@ function PaymentQR({ T, total, onBack, onConfirm }) {
           boxShadow: T.shadow,
         }}>
           <div style={{ textAlign: 'center', fontSize: 11, color: T.inkSoft, marginBottom: 8, fontWeight: 600 }}>
-            PromptPay · เสี่ยจุ้น
+            PromptPay · {(window.APP_CONFIG?.SHOP_NAME) || 'ร้านค้า'}
           </div>
-          <QRPlaceholder T={T} size={200}/>
+          <PromptPayQR T={T} total={total} size={220}/>
           <div style={{ textAlign: 'center', fontSize: 11, color: T.inkMute, marginTop: 8, fontFamily: 'ui-monospace, monospace' }}>
-            089-XXX-XX78
+            {fmtPhone(window.APP_CONFIG?.PROMPTPAY_NUMBER || '')}
           </div>
         </div>
       </div>
@@ -701,26 +701,77 @@ function PaymentQR({ T, total, onBack, onConfirm }) {
   );
 }
 
-function QRPlaceholder({ T, size = 200 }) {
-  // simple deterministic QR-ish square grid
-  const n = 21;
-  const cell = size / n;
-  const cells = [];
-  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-    const corner = (x < 7 && y < 7) || (x >= n-7 && y < 7) || (x < 7 && y >= n-7);
-    const innerCorner = corner && ((x >= 2 && x < 5 && y >= 2 && y < 5) || (x >= n-5 && x < n-2 && y >= 2 && y < 5) || (x >= 2 && x < 5 && y >= n-5 && y < n-2));
-    const cornerFrame = corner && !innerCorner && (x === 0 || x === 6 || y === 0 || y === 6 || x === n-1 || x === n-7 || y === n-1 || y === n-7);
-    let fill = false;
-    if (corner) fill = innerCorner || cornerFrame;
-    else fill = ((x * 31 + y * 17 + x*y) % 7) < 3;
-    if (fill) cells.push(<rect key={`${x}-${y}`} x={x*cell} y={y*cell} width={cell} height={cell} fill="#1F2A22"/>);
+// ── PromptPay QR — EMVCo-compliant TLV payload + CRC16-CCITT ────────
+function buildPromptPayPayload(target, amount) {
+  const f = (tag, val) => tag + String(val.length).padStart(2,'0') + val;
+  let merchantId, idTag;
+  const cleaned = (target || '').replace(/\D/g,'');
+  if (/^\d{10}$/.test(cleaned)) {           // mobile (10 digits with leading 0)
+    merchantId = '0066' + cleaned.slice(1);
+    idTag = '01';
+  } else if (/^\d{13}$/.test(cleaned)) {    // citizen ID
+    merchantId = cleaned;
+    idTag = '02';
+  } else {
+    throw new Error('PromptPay target ต้องเป็นเบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก');
   }
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
-      <rect width={size} height={size} fill="#fff"/>
-      {cells}
-    </svg>
-  );
+  const merchantInfo = f('00','A000000677010111') + f(idTag, merchantId);
+  const body =
+    f('00','01') +
+    f('01', amount > 0 ? '12' : '11') +
+    f('29', merchantInfo) +
+    f('53','764') +
+    (amount > 0 ? f('54', Number(amount).toFixed(2)) : '') +
+    f('58','TH');
+  const withCrcTag = body + '6304';
+  return withCrcTag + crc16ccitt(withCrcTag);
+}
+function crc16ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4,'0');
+}
+function fmtPhone(p) {
+  if (!p) return '';
+  const c = p.replace(/\D/g,'');
+  if (c.length === 10) return `${c.slice(0,3)}-${c.slice(3,6)}-${c.slice(6)}`;
+  if (c.length === 13) return c.replace(/(\d{1})(\d{4})(\d{5})(\d{2})(\d{1})/, '$1-$2-$3-$4-$5');
+  return p;
+}
+
+function PromptPayQR({ T, total, size = 220 }) {
+  const [dataUrl, setDataUrl] = useS('');
+  const [err, setErr] = useS('');
+  const phone = (window.APP_CONFIG && window.APP_CONFIG.PROMPTPAY_NUMBER) || '';
+
+  useE(() => {
+    if (!phone) { setErr('ยังไม่ได้ตั้งเบอร์ PromptPay ใน config.js'); return; }
+    if (!window.QRCode) { setErr('ไลบรารี QR ยังโหลดไม่เสร็จ — ลอง refresh อีกครั้ง'); return; }
+    try {
+      const payload = buildPromptPayPayload(phone, total);
+      window.QRCode.toDataURL(payload, { width: size, margin: 1, errorCorrectionLevel: 'M' })
+        .then(url => setDataUrl(url))
+        .catch(e => setErr(e.message || String(e)));
+    } catch (e) { setErr(e.message || String(e)); }
+  }, [phone, total, size]);
+
+  if (err) {
+    return <div style={{
+      width: size, height: size, background: '#FBF7EC',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      color: T.danger, fontSize: 12, padding: 12, textAlign: 'center',
+    }}>{err}</div>;
+  }
+  if (!dataUrl) {
+    return <div style={{ width: size, height: size, background: '#FBF7EC' }}/>;
+  }
+  return <img src={dataUrl} alt="PromptPay QR" width={size} height={size} style={{ display: 'block' }}/>;
 }
 
 function PaymentDone({ T, onClose }) {
