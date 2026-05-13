@@ -29,10 +29,10 @@ const MENU_SEED = [
 ];
 
 const CATEGORIES = [
-  { id: 'all',      name: 'ทั้งหมด' },
-  { id: 'juice',    name: 'น้ำคั้นสด' },
-  { id: 'smoothie', name: 'ปั่น' },
-  { id: 'veg',      name: 'น้ำผัก' },
+  { id: 'all',    name: 'ทั้งหมด' },
+  { id: 'small',  name: 'เล็ก' },
+  { id: 'medium', name: 'กลาง' },
+  { id: 'large',  name: 'ใหญ่' },
 ];
 
 // Mock 14 days of sales for dashboard

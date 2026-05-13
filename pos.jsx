@@ -74,7 +74,7 @@ function POSGridBottom({ T, menu, cart, setCart, onCheckout, user }) {
                 boxShadow: q > 0 ? `0 0 0 3px ${T.accent}20` : T.shadow,
                 transition: 'all .15s',
               }}>
-                <FruitDot color={it.color} size={48}/>
+                <FruitDot color={it.color} image={it.image_url} size={48}/>
                 <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: T.ink, lineHeight: 1.2, minHeight: 32, textWrap: 'pretty' }}>{it.name}</div>
                 <div style={{ marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: 'ui-monospace, monospace' }}>{fmtTHB(it.price)}</span>
@@ -220,7 +220,7 @@ function POSListDrawer({ T, menu, cart, setCart, onCheckout, user }) {
               borderBottom: i === items.length - 1 ? 'none' : `1px solid ${T.line}`,
               opacity: it.stock ? 1 : 0.4,
             }}>
-              <FruitDot color={it.color} size={44}/>
+              <FruitDot color={it.color} image={it.image_url} size={44}/>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {it.name}
@@ -438,7 +438,7 @@ function POSCardsSheet({ T, menu, cart, setCart, onCheckout, user }) {
                   background: 'rgba(240,230,209,0.1)', padding: '4px 10px 4px 4px',
                   borderRadius: 999, flexShrink: 0,
                 }}>
-                  <FruitDot color={l.color} size={24}/>
+                  <FruitDot color={l.color} image={l.image_url} size={24}/>
                   <span style={{ fontSize: 12, color: '#F0E6D1', fontWeight: 600 }}>×{l.qty}</span>
                 </div>
               ))}
@@ -502,7 +502,7 @@ function CartSheet({ T, cart, menu, onAdd, onSub, onClose, onPay, total }) {
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 0', borderBottom: `1px solid ${T.line}`,
             }}>
-              <FruitDot color={l.color} size={40}/>
+              <FruitDot color={l.color} image={l.image_url} size={40}/>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: T.ink }}>{l.name}</div>
                 <div style={{ fontSize: 12, color: T.inkMute, fontFamily: 'ui-monospace, monospace' }}>{fmtTHB(l.price)} × {l.qty}</div>

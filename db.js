@@ -111,6 +111,18 @@
     return rowToOrder(data);
   }
 
+  async function uploadMenuImage(file) {
+    const rawExt = (file.name.split('.').pop() || 'png').toLowerCase();
+    const ext = rawExt.replace(/[^a-z0-9]/g, '') || 'png';
+    const path = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
+    const { error } = await sb.storage.from('menu-images').upload(path, file, {
+      cacheControl: '3600', upsert: false, contentType: file.type || 'image/png',
+    });
+    if (error) throw error;
+    const { data } = sb.storage.from('menu-images').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
   // ─── Realtime ───────────────────────────────────────────────────
   function subscribe({ onMenu, onExpense, onOrder }) {
     const ch = sb.channel('siachun-pos')
@@ -183,7 +195,7 @@
 
   window.DB = {
     loadAll, loadMenu, loadExpenses, loadTodayOrders, loadSales14d, loadUsers,
-    addMenu, updateMenu, deleteMenu, toggleMenuStock,
+    addMenu, updateMenu, deleteMenu, toggleMenuStock, uploadMenuImage,
     addExpense, deleteExpense,
     addOrder,
     subscribe,

@@ -6,7 +6,16 @@ const { useState, useEffect, useRef, useMemo } = React;
 // ─────────────────────────────────────────────────────────────
 // Primitives
 // ─────────────────────────────────────────────────────────────
-function FruitDot({ color, size = 44, label }) {
+function FruitDot({ color, size = 44, label, image }) {
+  if (image) {
+    return (
+      <img src={image} alt="" style={{
+        width: size, height: size, borderRadius: '50%', objectFit: 'cover',
+        boxShadow: 'inset -3px -4px 8px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+        flexShrink: 0, display: 'block',
+      }}/>
+    );
+  }
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
@@ -371,7 +380,7 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
                 width: 22, fontSize: 13, fontWeight: 700,
                 color: i === 0 ? T.warm : T.inkMute, fontFamily: 'ui-monospace, monospace',
               }}>{i+1}</div>
-              <FruitDot color={it.color} size={32}/>
+              <FruitDot color={it.color} image={it.image_url} size={32}/>
               <div style={{ flex: 1, fontSize: 14, color: T.ink, fontWeight: 500 }}>{it.name}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.qty} แก้ว</div>
             </div>
@@ -511,7 +520,7 @@ function MenuMgmtScreen({ T, menu, onAddMenu, onUpdateMenu, onDeleteMenu, onTogg
             borderRadius: T.r, border: `1px solid ${T.line}`,
             opacity: it.stock ? 1 : 0.55,
           }}>
-            <FruitDot color={it.color} size={42}/>
+            <FruitDot color={it.color} image={it.image_url} size={42}/>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
                 {it.name}
@@ -541,7 +550,7 @@ function MenuMgmtScreen({ T, menu, onAddMenu, onUpdateMenu, onDeleteMenu, onTogg
 
       {editing && (
         <MenuEditSheet T={T}
-          item={editing === '__new' ? { id: '__new', cat: 'juice', name: '', price: 100, cost: 30, color: '#F4A540', stock: true, fav: false } : menu.find(m => m.id === editing)}
+          item={editing === '__new' ? { id: '__new', cat: 'medium', name: '', price: 100, cost: 30, color: '#F4A540', image_url: null, stock: true, fav: false } : menu.find(m => m.id === editing)}
           onSave={save} onDelete={del} onClose={() => setEditing(null)}
         />
       )}
@@ -551,7 +560,24 @@ function MenuMgmtScreen({ T, menu, onAddMenu, onUpdateMenu, onDeleteMenu, onTogg
 
 function MenuEditSheet({ T, item, onSave, onDelete, onClose }) {
   const [draft, setDraft] = useState(item);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const colors = ['#F4A540','#E26B6B','#E8C547','#B5D17A','#D5E07A','#F2B743','#E0823A','#EFE7C8','#6B7DB8','#D88FAE','#D85767','#5E5F9E','#9CB279','#7FA86A','#A03658'];
+
+  async function handleImagePick(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await window.DB.uploadMenuImage(file);
+      setDraft(d => ({ ...d, image_url: url }));
+    } catch (err) {
+      alert('อัปโหลดรูปไม่สำเร็จ: ' + (err.message || err));
+    } finally {
+      setUploading(false);
+    }
+  }
   return (
     <div style={{
       position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)',
@@ -577,16 +603,43 @@ function MenuEditSheet({ T, item, onSave, onDelete, onClose }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
-          <FruitDot color={draft.color} size={68}/>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <FruitDot color={draft.color} image={draft.image_url} size={68}/>
+            {uploading && (
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '50%',
+                background: 'rgba(0,0,0,0.5)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 10, fontWeight: 600,
+              }}>กำลังอัปโหลด…</div>
+            )}
+          </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, color: T.inkSoft, marginBottom: 6, fontWeight: 600 }}>สีตัวแทน</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <button onClick={() => fileInputRef.current?.click()} disabled={uploading} style={{
+                padding: '6px 12px', borderRadius: T.rSm,
+                background: T.accent, color: T.accentInk, border: 'none',
+                fontFamily: T.ff, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                opacity: uploading ? 0.5 : 1,
+              }}>{draft.image_url ? 'เปลี่ยนรูป' : '+ อัปโหลดรูป'}</button>
+              {draft.image_url && (
+                <button onClick={() => setDraft({ ...draft, image_url: null })} style={{
+                  padding: '6px 10px', borderRadius: T.rSm,
+                  background: 'transparent', border: `1px solid ${T.line}`,
+                  color: T.danger, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: T.ff,
+                }}>ลบรูป</button>
+              )}
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImagePick} style={{ display: 'none' }}/>
+            </div>
+            <div style={{ fontSize: 11, color: T.inkSoft, marginBottom: 6, fontWeight: 600 }}>หรือเลือกสีตัวแทน</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {colors.map(c => (
                 <button key={c} onClick={() => setDraft({ ...draft, color: c })} style={{
                   width: 22, height: 22, borderRadius: '50%',
                   background: c, cursor: 'pointer',
                   border: draft.color === c ? `2px solid ${T.ink}` : '1px solid rgba(0,0,0,0.1)',
-                  padding: 0,
+                  padding: 0, opacity: draft.image_url ? 0.4 : 1,
                 }}/>
               ))}
             </div>
@@ -597,7 +650,7 @@ function MenuEditSheet({ T, item, onSave, onDelete, onClose }) {
           <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="เช่น น้ำส้มคั้นสด" style={inputStyle(T)}/>
         </Field>
 
-        <Field T={T} label="หมวด">
+        <Field T={T} label="ขนาด">
           <div style={{ display: 'flex', gap: 6 }}>
             {CATEGORIES.filter(c => c.id !== 'all').map(c => (
               <button key={c.id} onClick={() => setDraft({ ...draft, cat: c.id })} style={{
