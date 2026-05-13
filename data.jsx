@@ -36,6 +36,7 @@ const CATEGORIES = [
   { id: 'drink',  name: 'น้ำ' },
   { id: 'syrup',  name: 'ไซรัป' },
   { id: 'kratom', name: 'ใบกระท่อม' },
+  { id: 'other',  name: 'อื่นๆ' },
 ];
 
 // Mock 14 days of sales for dashboard
