@@ -923,23 +923,30 @@ function ExpenseAddSheet({ T, onSave, onClose, catColors }) {
 // ─────────────────────────────────────────────────────────────
 function ReportScreen({ T }) {
   const [range, setRange] = useState('week'); // today | week | month | all
+  const [viewDate, setViewDate] = useState(toDateInput(new Date()));
   const [state, setState] = useState({ orders: [], expenses: [], loading: true });
+  const isToday = viewDate === toDateInput(new Date());
 
   useEffect(() => {
     let alive = true;
     setState(s => ({ ...s, loading: true }));
-    const now = new Date();
-    let startISO = null;
-    if (range !== 'all') {
-      const start = new Date(now);
+    let startISO = null, endISO = null;
+    if (!isToday) {
+      // historic single day
+      const start = new Date(viewDate + 'T00:00:00');
+      const end   = new Date(start.getTime() + 86400000);
+      startISO = start.toISOString();
+      endISO   = end.toISOString();
+    } else if (range !== 'all') {
+      const start = new Date();
       start.setHours(0,0,0,0);
       if (range === 'week')  start.setDate(start.getDate() - 6);
       if (range === 'month') start.setDate(start.getDate() - 29);
       startISO = start.toISOString();
     }
     Promise.all([
-      window.DB.loadOrdersInRange(startISO, null),
-      window.DB.loadExpensesInRange(startISO, null),
+      window.DB.loadOrdersInRange(startISO, endISO),
+      window.DB.loadExpensesInRange(startISO, endISO),
     ]).then(([orders, expenses]) => {
       if (alive) setState({ orders, expenses, loading: false });
     }).catch(e => {
@@ -947,7 +954,7 @@ function ReportScreen({ T }) {
       alert('โหลดข้อมูลไม่สำเร็จ: ' + (e.message || e));
     });
     return () => { alive = false; };
-  }, [range]);
+  }, [range, viewDate, isToday]);
 
   const { orders, expenses, loading } = state;
   const gross   = orders.reduce((s, o) => s + o.total, 0);
@@ -969,29 +976,52 @@ function ReportScreen({ T }) {
   // expenses list (sorted by amount desc)
   const expList = [...expenses].sort((a,b) => b.amount - a.amount);
 
-  const rangeLabel = { today: 'วันนี้', week: '7 วัน', month: '30 วัน', all: 'ทั้งหมด' }[range];
+  const rangeLabel = !isToday
+    ? formatDateThai(viewDate)
+    : ({ today: 'วันนี้', week: '7 วัน', month: '30 วัน', all: 'ทั้งหมด' }[range]);
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: T.bg, paddingBottom: 100 }}>
       <ScreenHeader T={T} title="รายงานสรุป" subtitle={`สินค้าที่ขาย · รายได้รวม · กำไรสุทธิ`}/>
 
-      {/* Range tabs */}
-      <div style={{ padding: '0 20px', display: 'flex', gap: 6 }}>
-        {[
-          { id: 'today', label: 'วันนี้' },
-          { id: 'week',  label: '7 วัน' },
-          { id: 'month', label: '30 วัน' },
-          { id: 'all',   label: 'ทั้งหมด' },
-        ].map(r => (
-          <button key={r.id} onClick={() => setRange(r.id)} style={{
-            flex: 1, height: 36, borderRadius: T.r,
-            background: range === r.id ? T.ink : 'transparent',
-            color: range === r.id ? T.bg : T.inkSoft,
-            border: range === r.id ? 'none' : `1px solid ${T.line}`,
+      {/* Date picker */}
+      <div style={{ padding: '0 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>📅</span>
+        <input type="date" value={viewDate} max={toDateInput(new Date())}
+          onChange={e => setViewDate(e.target.value || toDateInput(new Date()))}
+          style={{
+            flex: 1, padding: '8px 10px', border: `1px solid ${T.line}`,
+            borderRadius: T.rSm, background: T.card, color: T.ink,
+            fontFamily: T.ff, fontSize: 13,
+          }}/>
+        {!isToday && (
+          <button onClick={() => setViewDate(toDateInput(new Date()))} style={{
+            padding: '8px 12px', borderRadius: T.rSm,
+            background: T.accent, color: T.accentInk, border: 'none',
             fontFamily: T.ff, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-          }}>{r.label}</button>
-        ))}
+          }}>วันนี้</button>
+        )}
       </div>
+
+      {/* Range tabs — only when viewing today */}
+      {isToday && (
+        <div style={{ padding: '0 20px', display: 'flex', gap: 6 }}>
+          {[
+            { id: 'today', label: 'วันนี้' },
+            { id: 'week',  label: '7 วัน' },
+            { id: 'month', label: '30 วัน' },
+            { id: 'all',   label: 'ทั้งหมด' },
+          ].map(r => (
+            <button key={r.id} onClick={() => setRange(r.id)} style={{
+              flex: 1, height: 36, borderRadius: T.r,
+              background: range === r.id ? T.ink : 'transparent',
+              color: range === r.id ? T.bg : T.inkSoft,
+              border: range === r.id ? 'none' : `1px solid ${T.line}`,
+              fontFamily: T.ff, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+            }}>{r.label}</button>
+          ))}
+        </div>
+      )}
 
       {loading && (
         <div style={{ textAlign: 'center', padding: 30, color: T.inkSoft, fontSize: 13 }}>กำลังโหลด…</div>
