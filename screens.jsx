@@ -191,20 +191,15 @@ function LoginScreen({ T, onLogin }) {
     }}>
       {/* Brand block */}
       <div style={{ padding: '30px 24px 0', textAlign: 'center' }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: 22,
-          background: T.accent, margin: '0 auto 14px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: T.shadow,
-        }}>
-          <Icon name="leaf" size={36} color={T.accentInk} stroke={2}/>
-        </div>
+        <img src="icon-192.png" alt="" width={96} height={96}
+          style={{
+            width: 96, height: 96, borderRadius: 22,
+            margin: '0 auto 14px', display: 'block',
+            boxShadow: T.shadow, objectFit: 'cover',
+          }}/>
         <div style={{
           fontFamily: T.ffDisplay, fontSize: 26, fontWeight: 700, color: T.ink, letterSpacing: -0.3,
         }}>ร้านเสี่ยจุ้น</div>
-        <div style={{ fontSize: 13, color: T.inkSoft, marginTop: 4, fontWeight: 500 }}>
-          น้ำผลไม้คั้นสด ดั้งเดิม ฿100
-        </div>
       </div>
 
       {/* User picker */}
