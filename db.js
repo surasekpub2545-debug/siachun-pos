@@ -73,8 +73,10 @@
 
   // ─── Mutations ──────────────────────────────────────────────────
   async function addMenu(item) {
-    const id = 'm' + String(Date.now()).slice(-6);
-    const row = { ...item, id, sort_order: Date.now() };
+    const ts = Date.now();
+    const id = 'm' + String(ts).slice(-6);
+    // sort_order must fit int32 — use seconds-since-epoch (good until 2038)
+    const row = { ...item, id, sort_order: Math.floor(ts / 1000) };
     const { data, error } = await sb.from('menu_items').insert(row).select().single();
     if (error) throw error;
     return data;
