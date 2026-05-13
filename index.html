@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="theme-color" content="#3D5A40"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>ร้านเสี่ยจุ้น · POS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Bai+Jamjuree:wght@500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #F2EBDB;
+    font-family: 'IBM Plex Sans Thai', system-ui, sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none; user-select: none;
+  }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  button:focus, input:focus { outline: none; }
+  input { -webkit-user-select: text; user-select: text; font-family: inherit; }
+  /* The shop frame — fills viewport on mobile, centers a phone-shaped panel on desktop */
+  #shopRoot {
+    position: fixed; inset: 0;
+    display: flex; align-items: stretch; justify-content: center;
+    background: linear-gradient(180deg, #2A3A2D 0%, #1F2A22 100%);
+  }
+  #shopRoot .shop-panel {
+    width: 100%; max-width: 480px; height: 100%;
+    background: #F2EBDB; position: relative; overflow: hidden;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  @media (min-width: 520px) and (min-height: 780px) {
+    #shopRoot { padding: 24px; }
+    #shopRoot .shop-panel {
+      max-width: 420px; height: min(900px, 100%);
+      border-radius: 32px;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+  }
+</style>
+</head>
+<body>
+<div id="shopRoot"><div class="shop-panel" id="root"></div></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="config.js"></script>
+<script src="db.js"></script>
+
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="themes.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="pos.jsx"></script>
+<script type="text/babel" src="app.jsx"></script>
+
+<script type="text/babel">
+ReactDOM.createRoot(document.getElementById('root')).render(<App theme="classic"/>);
+</script>
+</body>
+</html>
