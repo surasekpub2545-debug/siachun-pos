@@ -922,7 +922,7 @@ function ExpenseAddSheet({ T, onSave, onClose, catColors }) {
 // Report — full breakdown: items sold, gross, expenses, net
 // ─────────────────────────────────────────────────────────────
 function ReportScreen({ T }) {
-  const [range, setRange] = useState('week'); // today | week | month | all
+  const [range, setRange] = useState('today'); // today | week | month | all
   const [viewDate, setViewDate] = useState(toDateInput(new Date()));
   const [state, setState] = useState({ orders: [], expenses: [], loading: true });
   const isToday = viewDate === toDateInput(new Date());
