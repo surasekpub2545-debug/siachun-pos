@@ -607,7 +607,7 @@ function MenuMgmtScreen({ T, menu, onAddMenu, onUpdateMenu, onDeleteMenu, onTogg
                 {it.fav && <Icon name="star" size={12} color={T.warm}/>}
               </div>
               <div style={{ fontSize: 11, color: T.inkMute, marginTop: 2 }}>
-                {it.cat === 'small' ? 'ขนาดเล็ก' : it.cat === 'medium' ? 'ขนาดกลาง' : it.cat === 'large' ? 'ขนาดใหญ่' : 'ไม่ระบุขนาด'}
+                {CATEGORIES.find(c => c.id === it.cat)?.name || 'ไม่ระบุหมวดหมู่'}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -730,13 +730,11 @@ function MenuEditSheet({ T, item, onSave, onDelete, onClose }) {
           <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="เช่น น้ำส้มคั้นสด" style={inputStyle(T)}/>
         </Field>
 
-        <Field T={T} label="ขนาด (ไม่ระบุก็ได้)">
+        <Field T={T} label="หมวดหมู่ (ไม่ระบุก็ได้)">
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {[
-              { id: 'small',  name: 'เล็ก' },
-              { id: 'medium', name: 'กลาง' },
-              { id: 'large',  name: 'ใหญ่' },
-              { id: 'none',   name: 'ไม่ระบุ' },
+              ...CATEGORIES.filter(c => c.id !== 'all'),
+              { id: 'none', name: 'ไม่ระบุ' },
             ].map(c => (
               <button key={c.id} onClick={() => setDraft({ ...draft, cat: c.id })} style={{
                 flex: '1 1 60px', height: 40, borderRadius: T.rSm,
