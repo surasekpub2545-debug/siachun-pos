@@ -607,7 +607,7 @@ function MenuMgmtScreen({ T, menu, onAddMenu, onUpdateMenu, onDeleteMenu, onTogg
                 {it.fav && <Icon name="star" size={12} color={T.warm}/>}
               </div>
               <div style={{ fontSize: 11, color: T.inkMute, marginTop: 2 }}>
-                ต้นทุน {fmtTHB(it.cost)} · กำไร {fmtTHB(it.price - it.cost)}
+                {it.cat === 'small' ? 'ขนาดเล็ก' : it.cat === 'medium' ? 'ขนาดกลาง' : it.cat === 'large' ? 'ขนาดใหญ่' : 'ไม่ระบุขนาด'}
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
@@ -749,23 +749,9 @@ function MenuEditSheet({ T, item, onSave, onDelete, onClose }) {
           </div>
         </Field>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <Field T={T} label="ราคาขาย (บาท)" style={{ flex: 1 }}>
-            <input type="number" value={draft.price} onChange={e => setDraft({ ...draft, price: +e.target.value })} style={inputStyle(T)}/>
-          </Field>
-          <Field T={T} label="ต้นทุน (บาท)" style={{ flex: 1 }}>
-            <input type="number" value={draft.cost} onChange={e => setDraft({ ...draft, cost: +e.target.value })} style={inputStyle(T)}/>
-          </Field>
-        </div>
-
-        <div style={{
-          padding: '10px 14px', background: T.surface, borderRadius: T.rSm,
-          fontSize: 12, color: T.inkSoft, marginBottom: 16,
-          display: 'flex', justifyContent: 'space-between',
-        }}>
-          <span>กำไรต่อแก้ว</span>
-          <b style={{ color: T.accent, fontSize: 15 }}>{fmtTHB(Math.max(0, draft.price - draft.cost))}</b>
-        </div>
+        <Field T={T} label="ราคาขาย (บาท)">
+          <input type="number" value={draft.price} onChange={e => setDraft({ ...draft, price: +e.target.value })} style={inputStyle(T)}/>
+        </Field>
 
         <Btn T={T} size="lg" onClick={() => onSave(draft)} style={{ width: '100%' }} disabled={!draft.name}>
           {item.id === '__new' ? 'เพิ่มเมนู' : 'บันทึก'}
