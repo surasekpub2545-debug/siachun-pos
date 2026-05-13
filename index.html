@@ -40,7 +40,8 @@
     width: 100%; max-width: 480px; height: 100%;
     background: #F2EBDB; position: relative; overflow: hidden;
     padding-top: env(safe-area-inset-top, 0);
-    padding-bottom: env(safe-area-inset-bottom, 0);
+    /* No bottom padding — TabBar handles its own safe-area inset
+       so it can extend fully to the screen bottom on iOS. */
   }
   @media (min-width: 520px) and (min-height: 780px) {
     #shopRoot { padding: 24px; }

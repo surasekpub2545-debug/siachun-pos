@@ -1267,7 +1267,8 @@ function TabBar({ T, current, onChange, user }) {
   return (
     <div style={{
       position: 'absolute', bottom: 0, left: 0, right: 0,
-      paddingBottom: 26, background: T.card,
+      paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+      background: T.card,
       borderTop: `1px solid ${T.line}`, zIndex: 50,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-around', padding: '8px 6px 4px' }}>
