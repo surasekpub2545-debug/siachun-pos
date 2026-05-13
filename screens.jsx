@@ -37,6 +37,15 @@ function FruitDot({ color, size = 44, label, image }) {
   );
 }
 
+function toDateInput(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateThai(yyyymmdd) {
+  const d = new Date(yyyymmdd + 'T00:00:00');
+  return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
 function shade(hex, amt) {
   // tiny lighten/darken — amt -100..100
   const h = hex.replace('#','');
@@ -264,13 +273,26 @@ function LoginScreen({ T, onLogin }) {
 // ─────────────────────────────────────────────────────────────
 // Dashboard
 // ─────────────────────────────────────────────────────────────
-function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
+function DashboardScreen({ T, sales, orders, menu, user, onLogout, onDeleteOrder }) {
   const [range, setRange] = useState('day');  // day | week | month
+  const [viewDate, setViewDate] = useState(toDateInput(new Date()));
+  const [historicOrders, setHistoricOrders] = useState(null);
+  const isToday = viewDate === toDateInput(new Date());
 
-  const todayRevenue  = orders.reduce((s,o) => s + o.total, 0);
-  const todayOrders   = orders.length;
-  const cashTotal     = orders.filter(o => o.pay === 'cash').reduce((s,o)=>s+o.total,0);
-  const transferTotal = orders.filter(o => o.pay === 'transfer').reduce((s,o)=>s+o.total,0);
+  useEffect(() => {
+    if (isToday) { setHistoricOrders(null); return; }
+    let alive = true;
+    window.DB.loadOrdersByDate(viewDate)
+      .then(o => { if (alive) setHistoricOrders(o); })
+      .catch(e => alert('โหลดประวัติไม่สำเร็จ: ' + (e.message || e)));
+    return () => { alive = false; };
+  }, [viewDate, isToday]);
+
+  const displayOrders = isToday ? orders : (historicOrders || []);
+  const dayRevenue    = displayOrders.reduce((s,o) => s + o.total, 0);
+  const dayOrderCount = displayOrders.length;
+  const cashTotal     = displayOrders.filter(o => o.pay === 'cash').reduce((s,o)=>s+o.total,0);
+  const transferTotal = displayOrders.filter(o => o.pay === 'transfer').reduce((s,o)=>s+o.total,0);
 
   // range totals from per-day sales buckets (DB-backed, no fake multipliers)
   const sumBuckets = (arr) => arr.reduce(
@@ -279,27 +301,38 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
   );
   const week  = sumBuckets(sales.slice(-7));
   const month = sumBuckets(sales);
-  const cur = range === 'day'
-    ? { orders: todayOrders, revenue: todayRevenue }
+  const cur = !isToday
+    ? { orders: dayOrderCount, revenue: dayRevenue }
+    : range === 'day'  ? { orders: dayOrderCount, revenue: dayRevenue }
     : range === 'week' ? week : month;
-  const rangeLabel = range === 'day' ? 'ยอดขายวันนี้' : range === 'week' ? 'ยอดขาย 7 วัน' : 'ยอดขาย 30 วัน';
+  const rangeLabel = !isToday
+    ? `ยอดขาย ${formatDateThai(viewDate)}`
+    : range === 'day' ? 'ยอดขายวันนี้' : range === 'week' ? 'ยอดขาย 7 วัน' : 'ยอดขาย 30 วัน';
 
-  // top items today: tally from orders that have an items[] array; fallback to mock
+  async function handleDeleteOrder(o) {
+    if (!confirm(`ลบบิล ${o.id} (${fmtTHB(o.total)}) ? ยอดในสรุปจะลดลงด้วย`)) return;
+    if (isToday) {
+      onDeleteOrder(o.bill_no);
+    } else {
+      try {
+        await window.DB.deleteOrder(o.bill_no);
+        setHistoricOrders(prev => (prev || []).filter(x => x.bill_no !== o.bill_no));
+      } catch (e) { alert('ลบบิลไม่สำเร็จ: ' + (e.message || e)); }
+    }
+  }
+
+  // top items: tally from displayed orders' line items
   const topItems = useMemo(() => {
     const tally = {};
-    orders.forEach(o => (o.lines || []).forEach(l => {
+    displayOrders.forEach(o => (o.lines || []).forEach(l => {
       tally[l.id] = (tally[l.id] || 0) + l.qty;
     }));
-    // mock additional historical popularity
-    ['m01','m06','m11','m02','m13'].forEach((id, i) => {
-      tally[id] = (tally[id] || 0) + [18,14,11,9,7][i];
-    });
     return Object.entries(tally)
       .map(([id, qty]) => ({ ...menu.find(m => m.id === id), qty }))
       .filter(x => x.id)
       .sort((a,b) => b.qty - a.qty)
       .slice(0, 5);
-  }, [orders, menu]);
+  }, [displayOrders, menu]);
 
   return (
     <div style={{ flex: 1, overflow: 'auto', background: T.bg, paddingBottom: 100 }}>
@@ -314,22 +347,43 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
         }
       />
 
-      {/* Range tabs */}
-      <div style={{ padding: '0 20px', display: 'flex', gap: 6 }}>
-        {[
-          { id: 'day',   label: 'วันนี้' },
-          { id: 'week',  label: '7 วัน' },
-          { id: 'month', label: '30 วัน' },
-        ].map(r => (
-          <button key={r.id} onClick={() => setRange(r.id)} style={{
-            flex: 1, height: 38, borderRadius: T.r,
-            background: range === r.id ? T.ink : 'transparent',
-            color: range === r.id ? T.bg : T.inkSoft,
-            border: range === r.id ? 'none' : `1px solid ${T.line}`,
-            fontFamily: T.ff, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}>{r.label}</button>
-        ))}
+      {/* Date picker */}
+      <div style={{ padding: '0 20px 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, color: T.inkSoft, fontWeight: 600 }}>📅</span>
+        <input type="date" value={viewDate} max={toDateInput(new Date())}
+          onChange={e => setViewDate(e.target.value || toDateInput(new Date()))}
+          style={{
+            flex: 1, padding: '8px 10px', border: `1px solid ${T.line}`,
+            borderRadius: T.rSm, background: T.card, color: T.ink,
+            fontFamily: T.ff, fontSize: 13,
+          }}/>
+        {!isToday && (
+          <button onClick={() => setViewDate(toDateInput(new Date()))} style={{
+            padding: '8px 12px', borderRadius: T.rSm,
+            background: T.accent, color: T.accentInk, border: 'none',
+            fontFamily: T.ff, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>วันนี้</button>
+        )}
       </div>
+
+      {/* Range tabs — only when viewing today */}
+      {isToday && (
+        <div style={{ padding: '0 20px', display: 'flex', gap: 6 }}>
+          {[
+            { id: 'day',   label: 'วันนี้' },
+            { id: 'week',  label: '7 วัน' },
+            { id: 'month', label: '30 วัน' },
+          ].map(r => (
+            <button key={r.id} onClick={() => setRange(r.id)} style={{
+              flex: 1, height: 38, borderRadius: T.r,
+              background: range === r.id ? T.ink : 'transparent',
+              color: range === r.id ? T.bg : T.inkSoft,
+              border: range === r.id ? 'none' : `1px solid ${T.line}`,
+              fontFamily: T.ff, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>{r.label}</button>
+          ))}
+        </div>
+      )}
 
       {/* Big revenue card */}
       <div style={{
@@ -369,8 +423,8 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
 
       {/* Payment split */}
       <div style={{ margin: '12px 20px 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <StatCard T={T} icon="cash" label="เงินสด" value={fmtTHB(cashTotal)} sub={`${orders.filter(o=>o.pay==='cash').length} ออเดอร์`} tone="warm"/>
-        <StatCard T={T} icon="qr" label="โอน/QR" value={fmtTHB(transferTotal)} sub={`${orders.filter(o=>o.pay==='transfer').length} ออเดอร์`} tone="accent"/>
+        <StatCard T={T} icon="cash" label="เงินสด" value={fmtTHB(cashTotal)} sub={`${displayOrders.filter(o=>o.pay==='cash').length} ออเดอร์`} tone="warm"/>
+        <StatCard T={T} icon="qr" label="โอน/QR" value={fmtTHB(transferTotal)} sub={`${displayOrders.filter(o=>o.pay==='transfer').length} ออเดอร์`} tone="accent"/>
       </div>
 
       {/* Top sellers */}
@@ -403,11 +457,13 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
       {/* Recent orders */}
       <div style={{ margin: '12px 20px 0', padding: '14px 16px', background: T.card, borderRadius: T.r, border: `1px solid ${T.line}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>บิลล่าสุด</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>
+            {isToday ? 'บิลล่าสุด' : `บิลของ ${formatDateThai(viewDate)} (${displayOrders.length})`}
+          </div>
         </div>
-        {orders.slice(0, 5).map((o, i) => (
+        {(isToday ? displayOrders.slice(0, 5) : displayOrders).map((o, i) => (
           <div key={o.id} style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0',
+            display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0',
             borderTop: i === 0 ? 'none' : `1px solid ${T.line}`,
           }}>
             <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, color: T.inkSoft, width: 48 }}>{o.id}</div>
@@ -416,8 +472,20 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout }) {
             <div style={{ flex: 1 }}/>
             <div style={{ fontSize: 13, color: T.inkSoft }}>{o.items} แก้ว</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: 'ui-monospace, monospace' }}>{fmtTHB(o.total)}</div>
+            <button onClick={() => handleDeleteOrder(o)} title="ลบบิล" style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'transparent', border: `1px solid ${T.line}`,
+              color: T.danger, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 0, flexShrink: 0,
+            }}><Icon name="trash" size={13}/></button>
           </div>
         ))}
+        {displayOrders.length === 0 && (
+          <div style={{ fontSize: 13, color: T.inkMute, textAlign: 'center', padding: '16px 0' }}>
+            ไม่มีบิลในวันนี้
+          </div>
+        )}
       </div>
     </div>
   );
@@ -562,7 +630,7 @@ function MenuMgmtScreen({ T, menu, onAddMenu, onUpdateMenu, onDeleteMenu, onTogg
 
       {editing && (
         <MenuEditSheet T={T}
-          item={editing === '__new' ? { id: '__new', cat: 'medium', name: '', price: 100, cost: 30, color: '#F4A540', image_url: null, stock: true, fav: false } : menu.find(m => m.id === editing)}
+          item={editing === '__new' ? { id: '__new', cat: 'none', name: '', price: 100, cost: 30, color: '#F4A540', image_url: null, stock: true, fav: false } : menu.find(m => m.id === editing)}
           onSave={save} onDelete={del} onClose={() => setEditing(null)}
         />
       )}
@@ -662,11 +730,16 @@ function MenuEditSheet({ T, item, onSave, onDelete, onClose }) {
           <input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="เช่น น้ำส้มคั้นสด" style={inputStyle(T)}/>
         </Field>
 
-        <Field T={T} label="ขนาด">
-          <div style={{ display: 'flex', gap: 6 }}>
-            {CATEGORIES.filter(c => c.id !== 'all').map(c => (
+        <Field T={T} label="ขนาด (ไม่ระบุก็ได้)">
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {[
+              { id: 'small',  name: 'เล็ก' },
+              { id: 'medium', name: 'กลาง' },
+              { id: 'large',  name: 'ใหญ่' },
+              { id: 'none',   name: 'ไม่ระบุ' },
+            ].map(c => (
               <button key={c.id} onClick={() => setDraft({ ...draft, cat: c.id })} style={{
-                flex: 1, height: 40, borderRadius: T.rSm,
+                flex: '1 1 60px', height: 40, borderRadius: T.rSm,
                 background: draft.cat === c.id ? T.accent : T.card,
                 color: draft.cat === c.id ? T.accentInk : T.inkSoft,
                 border: draft.cat === c.id ? 'none' : `1px solid ${T.line}`,

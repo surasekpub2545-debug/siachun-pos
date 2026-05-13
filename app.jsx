@@ -92,6 +92,25 @@ function App({ theme }) {
     catch (e) { alert('อัปเดตสต๊อกไม่สำเร็จ: ' + (e.message || e)); }
   }
 
+  // ── Order mutations ──────────────────────────────────────────
+  async function onDeleteOrder(billNo) {
+    const target = orders.find(o => o.bill_no === billNo);
+    setOrders(prev => prev.filter(o => o.bill_no !== billNo));
+    if (target) {
+      setSales(prev => {
+        if (!prev.length) return prev;
+        const next = prev.slice();
+        const last = { ...next[next.length - 1] };
+        last.orders  = Math.max(0, last.orders - 1);
+        last.revenue = Math.max(0, last.revenue - target.total);
+        next[next.length - 1] = last;
+        return next;
+      });
+    }
+    try { await DB.deleteOrder(billNo); }
+    catch (e) { alert('ลบบิลไม่สำเร็จ: ' + (e.message || e)); }
+  }
+
   // ── Expense mutations ────────────────────────────────────────
   async function onAddExpense(item) {
     try {
@@ -121,7 +140,7 @@ function App({ theme }) {
     const Comp = { 'grid-bottom': POSGridBottom, 'list-drawer': POSListDrawer, 'cards-sheet': POSCardsSheet }[T.layout];
     main = <Comp T={T} menu={menu} cart={cart} setCart={setCart} onCheckout={checkout} user={user}/>;
   } else if (screen === 'dashboard') {
-    main = <DashboardScreen T={T} sales={sales} orders={orders} menu={menu} user={user} onLogout={() => setUser(null)}/>;
+    main = <DashboardScreen T={T} sales={sales} orders={orders} menu={menu} user={user} onLogout={() => setUser(null)} onDeleteOrder={onDeleteOrder}/>;
   } else if (screen === 'menu') {
     main = <MenuMgmtScreen T={T} menu={menu}
               onAddMenu={onAddMenu} onUpdateMenu={onUpdateMenu}

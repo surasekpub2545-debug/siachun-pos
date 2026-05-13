@@ -113,6 +113,22 @@
     return rowToOrder(data);
   }
 
+  async function deleteOrder(billNo) {
+    const { error } = await sb.from('orders').delete().eq('bill_no', billNo);
+    if (error) throw error;
+  }
+
+  async function loadOrdersByDate(dateStr) {
+    const start = new Date(dateStr + 'T00:00:00');
+    const end   = new Date(start.getTime() + 86400000);
+    const { data, error } = await sb.from('orders').select('*')
+      .gte('created_at', start.toISOString())
+      .lt('created_at', end.toISOString())
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data.map(rowToOrder);
+  }
+
   async function uploadMenuImage(file) {
     const rawExt = (file.name.split('.').pop() || 'png').toLowerCase();
     const ext = rawExt.replace(/[^a-z0-9]/g, '') || 'png';
@@ -143,8 +159,10 @@
   function rowToOrder(r) {
     const d = new Date(r.created_at);
     return {
+      bill_no: r.bill_no,
       id:      '#' + String(r.bill_no).padStart(4, '0'),
       time:    d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+      created_at: r.created_at,
       items:   r.items_count,
       total:   Number(r.total),
       pay:     r.pay,
@@ -199,7 +217,7 @@
     loadAll, loadMenu, loadExpenses, loadTodayOrders, loadSales30d, loadUsers,
     addMenu, updateMenu, deleteMenu, toggleMenuStock, uploadMenuImage,
     addExpense, deleteExpense,
-    addOrder,
+    addOrder, deleteOrder, loadOrdersByDate,
     subscribe,
   };
 })();
