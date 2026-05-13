@@ -585,7 +585,7 @@ function payOption(T, accent) {
 function PaymentCash({ T, total, received, setReceived, onBack, onConfirm }) {
   const r = +received || 0;
   const change = Math.max(0, r - total);
-  const quick = [total, 100, 500, 1000].filter((v, i, a) => v && a.indexOf(v) === i);
+  const quick = [100, 500, 1000].filter(v => v !== total);
 
   function tap(k) {
     if (k === '⌫') return setReceived(received.slice(0, -1));
@@ -620,6 +620,11 @@ function PaymentCash({ T, total, received, setReceived, onBack, onConfirm }) {
 
       {/* Quick amounts */}
       <div style={{ padding: '12px 20px 0', display: 'flex', gap: 6 }}>
+        <button key="exact" onClick={() => setReceived(String(total))} style={{
+          flex: 1.4, height: 38, borderRadius: T.rSm,
+          background: T.accent, border: 'none',
+          color: T.accentInk, fontFamily: T.ff, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+        }}>พอดี · {fmtTHB(total)}</button>
         {quick.map(v => (
           <button key={v} onClick={() => setReceived(String(v))} style={{
             flex: 1, height: 38, borderRadius: T.rSm,
