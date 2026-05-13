@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Drawing
 
-$src = "$PSScriptRoot\app-icon.png"
+$src = "$PSScriptRoot\Su.png"
 $source = [System.Drawing.Image]::FromFile($src)
 Write-Host "Source: $($source.Width) x $($source.Height)"
 
