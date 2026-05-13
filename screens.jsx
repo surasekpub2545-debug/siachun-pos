@@ -247,7 +247,7 @@ function LoginScreen({ T, onLogin }) {
         ))}
       </div>
       <div style={{ textAlign: 'center', fontSize: 12, color: T.inkMute, marginTop: 10 }}>
-        ใส่ PIN 4 หลัก (ลอง 1234 หรือ 5678)
+        ใส่ PIN 4 หลัก
       </div>
 
       {/* Keypad */}
