@@ -113,7 +113,7 @@ function POSGridBottom({ T, menu, cart, setCart, onCheckout, user }) {
             fontWeight: 700, fontSize: 14,
           }}>{count}</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 600 }}>ตะกร้า ({count} แก้ว)</div>
+            <div style={{ fontSize: 11, opacity: 0.85, fontWeight: 600 }}>ตะกร้า ({count} ชิ้น)</div>
             <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'ui-monospace, monospace', letterSpacing: -0.3 }}>{fmtTHB(total)}</div>
           </div>
           <div style={{ fontSize: 14, fontWeight: 700 }}>ดู ›</div>
@@ -452,7 +452,7 @@ function POSCardsSheet({ T, menu, cart, setCart, onCheckout, user }) {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '0 18px', fontFamily: T.ff, fontSize: 15, fontWeight: 700,
             }}>
-              <span>คิดเงิน · {count} แก้ว</span>
+              <span>คิดเงิน · {count} ชิ้น</span>
               <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 18 }}>{fmtTHB(total)}</span>
             </button>
           </div>

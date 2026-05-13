@@ -448,7 +448,7 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout, onDeleteOrder
               }}>{i+1}</div>
               <FruitDot color={it.color} image={it.image_url} size={32}/>
               <div style={{ flex: 1, fontSize: 14, color: T.ink, fontWeight: 500 }}>{it.name}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.qty} แก้ว</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.ink }}>{it.qty} ชิ้น</div>
             </div>
           ))}
         </div>
@@ -470,7 +470,7 @@ function DashboardScreen({ T, sales, orders, menu, user, onLogout, onDeleteOrder
             <div style={{ fontSize: 12, color: T.inkMute, width: 44 }}>{o.time}</div>
             <Pill T={T} tone={o.pay === 'cash' ? 'soft' : 'ghost'}>{o.pay === 'cash' ? 'เงินสด' : 'โอน'}</Pill>
             <div style={{ flex: 1 }}/>
-            <div style={{ fontSize: 13, color: T.inkSoft }}>{o.items} แก้ว</div>
+            <div style={{ fontSize: 13, color: T.inkSoft }}>{o.items} ชิ้น</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: 'ui-monospace, monospace' }}>{fmtTHB(o.total)}</div>
             <button onClick={() => handleDeleteOrder(o)} title="ลบบิล" style={{
               width: 28, height: 28, borderRadius: 8,
@@ -1013,7 +1013,7 @@ function ReportScreen({ T }) {
             <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.75 }}>รายได้รวม ({rangeLabel})</div>
             <div style={{ fontFamily: T.ffDisplay, fontSize: 38, fontWeight: 700, marginTop: 4 }}>{fmtTHB(gross)}</div>
             <div style={{ fontSize: 12, opacity: 0.85, marginTop: 6 }}>
-              {orders.length} บิล · {totalUnits} แก้ว · ก่อนหักรายจ่าย
+              {orders.length} บิล · {totalUnits} ชิ้น · ก่อนหักรายจ่าย
             </div>
           </div>
 
@@ -1055,7 +1055,7 @@ function ReportScreen({ T }) {
                   <div style={{ fontSize: 14, fontWeight: 500, color: T.ink }}>{it.name}</div>
                   <div style={{ fontSize: 11, color: T.inkMute }}>{fmtTHB(it.revenue)}</div>
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: 'ui-monospace, monospace' }}>{it.qty} แก้ว</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, fontFamily: 'ui-monospace, monospace' }}>{it.qty} ชิ้น</div>
               </div>
             ))}
           </div>
