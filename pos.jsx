@@ -99,7 +99,7 @@ function POSGridBottom({ T, menu, cart, setCart, onCheckout, user }) {
       {/* Sticky cart bar */}
       {count > 0 && (
         <div style={{
-          position: 'absolute', bottom: 76, left: 12, right: 12,
+          position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)', left: 12, right: 12,
           padding: '10px 14px 10px 14px',
           background: T.accent, borderRadius: T.rLg,
           color: T.accentInk, display: 'flex', alignItems: 'center', gap: 12,
@@ -256,7 +256,7 @@ function POSListDrawer({ T, menu, cart, setCart, onCheckout, user }) {
       {/* Floating cart button (right) */}
       {count > 0 && (
         <button onClick={() => setShowCart(true)} style={{
-          position: 'absolute', bottom: 88, right: 18,
+          position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 88px)', right: 18,
           height: 54, padding: '0 18px 0 14px', borderRadius: 999,
           background: T.ink, color: T.bg, border: 'none', cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 10,
@@ -422,7 +422,7 @@ function POSCardsSheet({ T, menu, cart, setCart, onCheckout, user }) {
 
       {/* Permanent bottom sheet */}
       <div style={{
-        position: 'absolute', bottom: 76, left: 0, right: 0,
+        position: 'absolute', bottom: 'calc(env(safe-area-inset-bottom, 0px) + 76px)', left: 0, right: 0,
         background: T.ink, color: '#F0E6D1',
         borderRadius: `${T.rLg}px ${T.rLg}px 0 0`,
         padding: count > 0 ? '14px 18px 14px' : '12px 18px',
