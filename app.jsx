@@ -6,12 +6,13 @@ function App({ theme }) {
   const T = window.THEMES[theme];
 
   const [user, setUser]         = uS(null);
-  const [screen, setScreen]     = uS('pos');   // pos | dashboard | menu | expense
+  const [screen, setScreen]     = uS('pos');   // pos | dashboard | menu | expense | users
   const [cart, setCart]         = uS({});
   const [menu, setMenu]         = uS([]);
   const [expenses, setExpenses] = uS([]);
   const [orders, setOrders]     = uS([]);
   const [sales, setSales]       = uS([]);
+  const [users, setUsers]       = uS([]);
   const [ready, setReady]       = uS(false);
   const [err, setErr]           = uS(null);
 
@@ -22,6 +23,7 @@ function App({ theme }) {
       try {
         const all = await DB.loadAll();
         window.USERS = all.users;     // LoginScreen reads from window.USERS
+        setUsers(all.users);
         setMenu(all.menu);
         setExpenses(all.expenses);
         setOrders(all.orders);
@@ -92,6 +94,32 @@ function App({ theme }) {
     catch (e) { alert('อัปเดตสต๊อกไม่สำเร็จ: ' + (e.message || e)); }
   }
 
+  // ── User mutations ───────────────────────────────────────────
+  async function onAddUser(u) {
+    try {
+      const saved = await DB.addUser(u);
+      setUsers(prev => [...prev, saved]);
+      window.USERS = [...users, saved];
+    } catch (e) { alert('เพิ่มผู้ใช้ไม่สำเร็จ: ' + (e.message || e)); throw e; }
+  }
+  async function onUpdateUser(oldPin, u) {
+    try {
+      await DB.updateUser(oldPin, u);
+      const next = users.map(x => x.pin === oldPin ? u : x);
+      setUsers(next);
+      window.USERS = next;
+      if (user?.pin === oldPin) setUser(u);  // keep current session in sync
+    } catch (e) { alert('แก้ไขผู้ใช้ไม่สำเร็จ: ' + (e.message || e)); throw e; }
+  }
+  async function onDeleteUser(pin) {
+    try {
+      await DB.deleteUser(pin);
+      const next = users.filter(x => x.pin !== pin);
+      setUsers(next);
+      window.USERS = next;
+    } catch (e) { alert('ลบผู้ใช้ไม่สำเร็จ: ' + (e.message || e)); throw e; }
+  }
+
   // ── Order mutations ──────────────────────────────────────────
   async function onDeleteOrder(billNo) {
     const target = orders.find(o => o.bill_no === billNo);
@@ -148,6 +176,9 @@ function App({ theme }) {
   } else if (screen === 'expense') {
     main = <ExpensesScreen T={T} expenses={expenses}
               onAddExpense={onAddExpense} onDeleteExpense={onDeleteExpense}/>;
+  } else if (screen === 'users') {
+    main = <UsersScreen T={T} users={users} currentUser={user}
+              onAddUser={onAddUser} onUpdateUser={onUpdateUser} onDeleteUser={onDeleteUser}/>;
   }
 
   return (
@@ -157,7 +188,7 @@ function App({ theme }) {
       display: 'flex', flexDirection: 'column', position: 'relative',
     }}>
       {main}
-      <TabBar T={T} current={screen} onChange={setScreen}/>
+      <TabBar T={T} current={screen} onChange={setScreen} user={user}/>
     </div>
   );
 }

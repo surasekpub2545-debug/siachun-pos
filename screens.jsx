@@ -939,12 +939,184 @@ function ExpenseAddSheet({ T, onSave, onClose, catColors }) {
 // ─────────────────────────────────────────────────────────────
 // Bottom Tab Bar
 // ─────────────────────────────────────────────────────────────
-function TabBar({ T, current, onChange }) {
+// ─────────────────────────────────────────────────────────────
+// User Management (owner only)
+// ─────────────────────────────────────────────────────────────
+function UsersScreen({ T, users, currentUser, onAddUser, onUpdateUser, onDeleteUser }) {
+  const [editing, setEditing] = useState(null);  // pin | '__new' | null
+
+  function startEdit(u) { setEditing(u.pin); }
+  function startNew()   { setEditing('__new'); }
+
+  async function save(draft, oldPin) {
+    if (oldPin === '__new') await onAddUser(draft);
+    else await onUpdateUser(oldPin, draft);
+    setEditing(null);
+  }
+  async function del(pin) {
+    if (pin === currentUser.pin) {
+      alert('ลบบัญชีตัวเองไม่ได้ — ออกจากระบบก่อน แล้วเข้าด้วยบัญชีอื่นก่อนค่อยลบ');
+      return;
+    }
+    const owners = users.filter(u => u.role === 'เจ้าของร้าน');
+    if (owners.length === 1 && owners[0].pin === pin) {
+      alert('ลบเจ้าของคนสุดท้ายไม่ได้ — ต้องมีเจ้าของอย่างน้อย 1 คน');
+      return;
+    }
+    if (!confirm(`ลบผู้ใช้ "${users.find(u => u.pin === pin)?.name}" ?`)) return;
+    await onDeleteUser(pin);
+    setEditing(null);
+  }
+
+  return (
+    <div style={{ flex: 1, overflow: 'auto', background: T.bg, paddingBottom: 100, position: 'relative' }}>
+      <ScreenHeader T={T} title="ผู้ใช้" subtitle={`${users.length} คน · จัดการ PIN และตำแหน่ง`}
+        right={<Btn T={T} size="sm" icon="plus" onClick={startNew}>เพิ่ม</Btn>}
+      />
+      <div style={{ padding: '12px 20px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {users.map(u => (
+          <div key={u.pin} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '12px 14px', background: T.card,
+            borderRadius: T.r, border: `1px solid ${T.line}`,
+          }}>
+            <div style={{
+              width: 42, height: 42, borderRadius: '50%',
+              background: u.role === 'เจ้าของร้าน' ? T.accent : T.line,
+              color: u.role === 'เจ้าของร้าน' ? T.accentInk : T.inkSoft,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: 18, fontFamily: T.ffDisplay,
+            }}>{u.initial}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: T.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
+                {u.name}
+                {u.pin === currentUser.pin && <Pill T={T} tone="soft">คุณ</Pill>}
+              </div>
+              <div style={{ fontSize: 11, color: T.inkMute, marginTop: 2 }}>
+                {u.role} · PIN •••• {u.pin.slice(-1)}
+              </div>
+            </div>
+            <button onClick={() => startEdit(u)} style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: T.surface, border: `1px solid ${T.line}`,
+              color: T.inkSoft, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}><Icon name="edit" size={15}/></button>
+          </div>
+        ))}
+      </div>
+      {editing && (
+        <UserEditSheet T={T}
+          user={editing === '__new' ? { pin: '', name: '', role: 'พนักงาน', initial: '' } : users.find(u => u.pin === editing)}
+          isNew={editing === '__new'}
+          existingPins={users.map(u => u.pin)}
+          onSave={(draft) => save(draft, editing)}
+          onDelete={() => del(editing)}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function UserEditSheet({ T, user, isNew, existingPins, onSave, onDelete, onClose }) {
+  const [draft, setDraft] = useState(user);
+  const [err, setErr] = useState('');
+
+  function autoInitial(name) {
+    return (name?.trim()?.[0] || '').toUpperCase();
+  }
+
+  function handleSave() {
+    if (!draft.name?.trim()) { setErr('ใส่ชื่อด้วย'); return; }
+    if (!/^\d{4}$/.test(draft.pin || '')) { setErr('PIN ต้องเป็นตัวเลข 4 หลัก'); return; }
+    if ((isNew || draft.pin !== user.pin) && existingPins.includes(draft.pin)) {
+      setErr('PIN นี้มีอยู่แล้ว — เลือกใหม่');
+      return;
+    }
+    const finalDraft = {
+      ...draft,
+      name: draft.name.trim(),
+      initial: (draft.initial?.trim() || autoInitial(draft.name)).slice(0, 2),
+    };
+    onSave(finalDraft);
+  }
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)',
+      display: 'flex', alignItems: 'flex-end', zIndex: 100,
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: '100%', background: T.bg, borderRadius: `${T.rLg}px ${T.rLg}px 0 0`,
+        padding: '14px 20px 28px', maxHeight: '88%', overflowY: 'auto',
+        animation: 'slideUp .25s cubic-bezier(.2,.7,.3,1)',
+      }}>
+        <div style={{ width: 36, height: 4, background: T.line, borderRadius: 2, margin: '0 auto 14px' }}/>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <h3 style={{ margin: 0, fontFamily: T.ffDisplay, fontSize: 20, fontWeight: 700, color: T.ink }}>
+            {isNew ? 'เพิ่มผู้ใช้ใหม่' : 'แก้ไขผู้ใช้'}
+          </h3>
+          {!isNew && (
+            <button onClick={onDelete} style={{
+              background: 'transparent', border: 'none', color: T.danger,
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}><Icon name="trash" size={14}/> ลบ</button>
+          )}
+        </div>
+
+        <Field T={T} label="ชื่อ">
+          <input value={draft.name}
+            onChange={e => setDraft({ ...draft, name: e.target.value, initial: draft.initial || autoInitial(e.target.value) })}
+            placeholder="เช่น น้องบี" style={inputStyle(T)}/>
+        </Field>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <Field T={T} label="PIN (4 หลัก)" style={{ flex: 2 }}>
+            <input value={draft.pin} maxLength={4} inputMode="numeric"
+              onChange={e => setDraft({ ...draft, pin: e.target.value.replace(/\D/g,'').slice(0,4) })}
+              placeholder="0000" style={{ ...inputStyle(T), fontFamily: 'ui-monospace, monospace', letterSpacing: 4 }}/>
+          </Field>
+          <Field T={T} label="ตัวอักษร" style={{ flex: 1 }}>
+            <input value={draft.initial} maxLength={2}
+              onChange={e => setDraft({ ...draft, initial: e.target.value })}
+              placeholder="ก" style={{ ...inputStyle(T), textAlign: 'center', fontWeight: 700 }}/>
+          </Field>
+        </div>
+
+        <Field T={T} label="ตำแหน่ง">
+          <div style={{ display: 'flex', gap: 6 }}>
+            {['เจ้าของร้าน','พนักงาน'].map(r => (
+              <button key={r} onClick={() => setDraft({ ...draft, role: r })} style={{
+                flex: 1, height: 40, borderRadius: T.rSm,
+                background: draft.role === r ? T.accent : T.card,
+                color: draft.role === r ? T.accentInk : T.inkSoft,
+                border: draft.role === r ? 'none' : `1px solid ${T.line}`,
+                fontFamily: T.ff, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>{r}</button>
+            ))}
+          </div>
+        </Field>
+
+        {err && <div style={{ color: T.danger, fontSize: 12, marginBottom: 10 }}>{err}</div>}
+
+        <Btn T={T} size="lg" onClick={handleSave} style={{ width: '100%' }}>
+          {isNew ? 'เพิ่มผู้ใช้' : 'บันทึก'}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+function TabBar({ T, current, onChange, user }) {
+  const isOwner = user?.role === 'เจ้าของร้าน';
   const tabs = [
     { id: 'pos',       label: 'ขาย',     icon: 'cart' },
     { id: 'dashboard', label: 'สรุปยอด', icon: 'chart' },
     { id: 'menu',      label: 'เมนู',     icon: 'menu' },
     { id: 'expense',   label: 'รายจ่าย', icon: 'wallet' },
+    ...(isOwner ? [{ id: 'users', label: 'ผู้ใช้', icon: 'user' }] : []),
   ];
   return (
     <div style={{
@@ -974,5 +1146,5 @@ function TabBar({ T, current, onChange }) {
 
 Object.assign(window, {
   FruitDot, Icon, Pill, Btn, ScreenHeader, Field, inputStyle, shade,
-  LoginScreen, DashboardScreen, MenuMgmtScreen, ExpensesScreen, TabBar,
+  LoginScreen, DashboardScreen, MenuMgmtScreen, ExpensesScreen, UsersScreen, TabBar,
 });

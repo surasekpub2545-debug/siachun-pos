@@ -129,6 +129,22 @@
     return data.map(rowToOrder);
   }
 
+  async function addUser(u) {
+    const row = { pin: u.pin, name: u.name, role: u.role, initial: u.initial };
+    const { data, error } = await sb.from('app_users').insert(row).select().single();
+    if (error) throw error;
+    return data;
+  }
+  async function updateUser(oldPin, u) {
+    const row = { pin: u.pin, name: u.name, role: u.role, initial: u.initial };
+    const { error } = await sb.from('app_users').update(row).eq('pin', oldPin);
+    if (error) throw error;
+  }
+  async function deleteUser(pin) {
+    const { error } = await sb.from('app_users').delete().eq('pin', pin);
+    if (error) throw error;
+  }
+
   async function uploadMenuImage(file) {
     const rawExt = (file.name.split('.').pop() || 'png').toLowerCase();
     const ext = rawExt.replace(/[^a-z0-9]/g, '') || 'png';
@@ -216,6 +232,7 @@
   window.DB = {
     loadAll, loadMenu, loadExpenses, loadTodayOrders, loadSales30d, loadUsers,
     addMenu, updateMenu, deleteMenu, toggleMenuStock, uploadMenuImage,
+    addUser, updateUser, deleteUser,
     addExpense, deleteExpense,
     addOrder, deleteOrder, loadOrdersByDate,
     subscribe,
